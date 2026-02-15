@@ -1,3 +1,5 @@
+// Helper to strip _id and __v
+const stripMongoMeta = (arr = []) => arr.map(({ _id, __v, ...rest }) => rest);
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -49,8 +51,7 @@ app.post('/api/sync', async (req, res) => {
       User.deleteMany({}), Shift.deleteMany({}), Leave.deleteMany({}), Advance.deleteMany({}), Post.deleteMany({}), Announcement.deleteMany({})
     ]);
 
-    const stripMongoMeta = (arr) =>
-      arr.map(({ _id, __v, ...rest }) => rest);
+    console.log("SYNC counts", { workers: workers.length, shifts: shifts.length, leaves: leaves.length, advances: advances.length, posts: posts.length, announcements: announcements.length });
 
     if (workers.length)
       await User.insertMany(stripMongoMeta(workers), { ordered: false });
@@ -77,7 +78,8 @@ app.post('/api/sync', async (req, res) => {
       error: "Sync failed",
       message: err.message,
       name: err.name,
-      code: err.code
+      code: err.code,
+      stack: err.stack
     });
   }
 });
@@ -90,8 +92,7 @@ app.post('/api/restore', async (req, res) => {
       User.deleteMany({}), Shift.deleteMany({}), Leave.deleteMany({}), Advance.deleteMany({}), Post.deleteMany({}), Announcement.deleteMany({})
     ]);
 
-    const stripMongoMeta = (arr) =>
-      arr.map(({ _id, __v, ...rest }) => rest);
+    console.log("RESTORE counts", { workers: workers.length, shifts: shifts.length, leaves: leaves.length, advances: advances.length, posts: posts.length, announcements: announcements.length });
 
     if (workers.length)
       await User.insertMany(stripMongoMeta(workers), { ordered: false });
@@ -118,7 +119,8 @@ app.post('/api/restore', async (req, res) => {
       error: "Restore failed",
       message: err.message,
       name: err.name,
-      code: err.code
+      code: err.code,
+      stack: err.stack
     });
   }
 });
