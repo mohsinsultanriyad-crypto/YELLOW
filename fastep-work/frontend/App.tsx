@@ -24,20 +24,27 @@ const App: React.FC = () => {
   const saveTimer = useRef<number | null>(null);
 
   // Load from backend (fallback to localStorage if backend unavailable)
+  // Polling logic added below
   useEffect(() => {
     let mounted = true;
+    let pollingInterval: number | null = null;
+    let isFetching = false;
+
     const load = async () => {
+      if (isFetching) return;
+      isFetching = true;
       try {
         const res = await fetch(`${API_BASE}/api/data`);
         if (!res.ok) throw new Error('no backend');
         const data = await res.json();
         if (!mounted) return;
-        if (data.shifts) setShifts(data.shifts);
-        if (data.leaves) setLeaves(data.leaves);
-        if (data.posts) setPosts(data.posts);
-        if (data.workers && data.workers.length) setWorkers(data.workers);
-        if (data.advances) setAdvanceRequests(data.advances);
-        if (data.announcements) setAnnouncements(data.announcements);
+        // Only update state if data differs
+        if (data.shifts && JSON.stringify(data.shifts) !== JSON.stringify(shifts)) setShifts(data.shifts);
+        if (data.leaves && JSON.stringify(data.leaves) !== JSON.stringify(leaves)) setLeaves(data.leaves);
+        if (data.posts && JSON.stringify(data.posts) !== JSON.stringify(posts)) setPosts(data.posts);
+        if (data.workers && data.workers.length && JSON.stringify(data.workers) !== JSON.stringify(workers)) setWorkers(data.workers);
+        if (data.advances && JSON.stringify(data.advances) !== JSON.stringify(advanceRequests)) setAdvanceRequests(data.advances);
+        if (data.announcements && JSON.stringify(data.announcements) !== JSON.stringify(announcements)) setAnnouncements(data.announcements);
       } catch (err) {
         // Fallback to localStorage for local dev
         const savedShifts = localStorage.getItem('fw_shifts');
@@ -46,19 +53,32 @@ const App: React.FC = () => {
         const savedWorkers = localStorage.getItem('fw_workers');
         const savedAdvance = localStorage.getItem('fw_advance');
         const savedAnnouncements = localStorage.getItem('fw_announcements');
-        if (savedShifts) setShifts(JSON.parse(savedShifts));
-        if (savedLeaves) setLeaves(JSON.parse(savedLeaves));
-        if (savedPosts) setPosts(JSON.parse(savedPosts));
-        if (savedWorkers) setWorkers(JSON.parse(savedWorkers));
-        if (savedAdvance) setAdvanceRequests(JSON.parse(savedAdvance));
-        if (savedAnnouncements) setAnnouncements(JSON.parse(savedAnnouncements));
+        if (savedShifts && JSON.stringify(JSON.parse(savedShifts)) !== JSON.stringify(shifts)) setShifts(JSON.parse(savedShifts));
+        if (savedLeaves && JSON.stringify(JSON.parse(savedLeaves)) !== JSON.stringify(leaves)) setLeaves(JSON.parse(savedLeaves));
+        if (savedPosts && JSON.stringify(JSON.parse(savedPosts)) !== JSON.stringify(posts)) setPosts(JSON.parse(savedPosts));
+        if (savedWorkers && JSON.stringify(JSON.parse(savedWorkers)) !== JSON.stringify(workers)) setWorkers(JSON.parse(savedWorkers));
+        if (savedAdvance && JSON.stringify(JSON.parse(savedAdvance)) !== JSON.stringify(advanceRequests)) setAdvanceRequests(JSON.parse(savedAdvance));
+        if (savedAnnouncements && JSON.stringify(JSON.parse(savedAnnouncements)) !== JSON.stringify(announcements)) setAnnouncements(JSON.parse(savedAnnouncements));
       } finally {
         if (mounted) setIsLoaded(true);
+        isFetching = false;
       }
     };
+
+    // Initial load
     load();
-    return () => { mounted = false; };
-  }, []);
+
+    // Setup polling if user is logged in
+    if (currentUser) {
+      const intervalMs = currentUser.role === 'admin' ? 3000 : 5000;
+      pollingInterval = window.setInterval(load, intervalMs);
+    }
+
+    return () => {
+      mounted = false;
+      if (pollingInterval) window.clearInterval(pollingInterval);
+    };
+  }, [currentUser]);
 
   // Save sync to backend (debounced); skip until loaded
   useEffect(() => {
