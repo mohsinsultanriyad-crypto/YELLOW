@@ -19,8 +19,29 @@ app.use(cors({ origin: function(origin, callback){
 }}));
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/fastep';
-mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true }).then(() => {
+mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true }).then(async () => {
   console.log('Connected to MongoDB');
+  // Index migration for User email
+  try {
+    const indexes = await User.collection.indexes();
+    const hasEmailIndex = indexes.some(i => i.name === "email_1");
+    if (hasEmailIndex) {
+      console.log("Dropping old unique index: email_1");
+      await User.collection.dropIndex("email_1");
+    }
+  } catch (e) {
+    console.log("Index check/drop skipped:", e.message);
+  }
+
+  try {
+    console.log("Creating partial unique index on email (only when string)...");
+    await User.collection.createIndex(
+      { email: 1 },
+      { unique: true, partialFilterExpression: { email: { $type: "string" } } }
+    );
+  } catch (e) {
+    console.log("Index create skipped:", e.message);
+  }
 }).catch(err => { console.error('MongoDB connection error', err); process.exit(1); });
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));

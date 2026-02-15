@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const UserSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   workerId: String,
-  email: String,
+  email: { type: String, default: null },
   name: String,
   role: { type: String, enum: ['worker', 'admin'], required: true },
   trade: String,
@@ -66,6 +66,12 @@ const AnnouncementSchema = new mongoose.Schema({
   priority: { type: String, enum: ['low','high'] },
   timestamp: Number
 }, { timestamps: true });
+
+// Partial unique index for email (only when string)
+UserSchema.index(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: "string" } } }
+);
 
 const User = mongoose.model('User', UserSchema);
 const Shift = mongoose.model('Shift', ShiftSchema);
