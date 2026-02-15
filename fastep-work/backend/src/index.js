@@ -49,17 +49,36 @@ app.post('/api/sync', async (req, res) => {
       User.deleteMany({}), Shift.deleteMany({}), Leave.deleteMany({}), Advance.deleteMany({}), Post.deleteMany({}), Announcement.deleteMany({})
     ]);
 
-    if (workers.length) await User.insertMany(workers);
-    if (shifts.length) await Shift.insertMany(shifts);
-    if (leaves.length) await Leave.insertMany(leaves);
-    if (advances.length) await Advance.insertMany(advances);
-    if (posts.length) await Post.insertMany(posts);
-    if (announcements.length) await Announcement.insertMany(announcements);
+    const stripMongoMeta = (arr) =>
+      arr.map(({ _id, __v, ...rest }) => rest);
+
+    if (workers.length)
+      await User.insertMany(stripMongoMeta(workers), { ordered: false });
+
+    if (shifts.length)
+      await Shift.insertMany(stripMongoMeta(shifts), { ordered: false });
+
+    if (leaves.length)
+      await Leave.insertMany(stripMongoMeta(leaves), { ordered: false });
+
+    if (advances.length)
+      await Advance.insertMany(stripMongoMeta(advances), { ordered: false });
+
+    if (posts.length)
+      await Post.insertMany(stripMongoMeta(posts), { ordered: false });
+
+    if (announcements.length)
+      await Announcement.insertMany(stripMongoMeta(announcements), { ordered: false });
 
     res.json({ ok: true });
   } catch (err) {
-    console.error('Sync error', err);
-    res.status(500).json({ error: 'Sync failed' });
+    console.error("Sync error:", err);
+    return res.status(500).json({
+      error: "Sync failed",
+      message: err.message,
+      name: err.name,
+      code: err.code
+    });
   }
 });
 
@@ -70,16 +89,37 @@ app.post('/api/restore', async (req, res) => {
     await Promise.all([
       User.deleteMany({}), Shift.deleteMany({}), Leave.deleteMany({}), Advance.deleteMany({}), Post.deleteMany({}), Announcement.deleteMany({})
     ]);
-    if (workers.length) await User.insertMany(workers);
-    if (shifts.length) await Shift.insertMany(shifts);
-    if (leaves.length) await Leave.insertMany(leaves);
-    if (advances.length) await Advance.insertMany(advances);
-    if (posts.length) await Post.insertMany(posts);
-    if (announcements.length) await Announcement.insertMany(announcements);
+
+    const stripMongoMeta = (arr) =>
+      arr.map(({ _id, __v, ...rest }) => rest);
+
+    if (workers.length)
+      await User.insertMany(stripMongoMeta(workers), { ordered: false });
+
+    if (shifts.length)
+      await Shift.insertMany(stripMongoMeta(shifts), { ordered: false });
+
+    if (leaves.length)
+      await Leave.insertMany(stripMongoMeta(leaves), { ordered: false });
+
+    if (advances.length)
+      await Advance.insertMany(stripMongoMeta(advances), { ordered: false });
+
+    if (posts.length)
+      await Post.insertMany(stripMongoMeta(posts), { ordered: false });
+
+    if (announcements.length)
+      await Announcement.insertMany(stripMongoMeta(announcements), { ordered: false });
+
     res.json({ ok: true });
   } catch (err) {
-    console.error('Restore error', err);
-    res.status(500).json({ error: 'Restore failed' });
+    console.error("Restore error:", err);
+    return res.status(500).json({
+      error: "Restore failed",
+      message: err.message,
+      name: err.name,
+      code: err.code
+    });
   }
 });
 
